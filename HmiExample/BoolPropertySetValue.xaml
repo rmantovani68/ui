@@ -1,0 +1,17 @@
+﻿<Window x:Class="HmiExample.BoolPropertySetValue"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BoolPropertySetValue" Width="316" Height="106">
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Margin="0" Grid.Row="1" Orientation="Horizontal" FlowDirection="RightToLeft" Height="20" VerticalAlignment="Top" HorizontalAlignment="Center">
+            <Button x:Name="btnOk" Content="Ok" Margin="10,0,0,0" IsDefault="True" Width="100" Height="20" Click="btnOk_Click"/>
+            <Button x:Name="btnCancel" Content="Cancel" HorizontalContentAlignment="Center" IsCancel="True" Width="100" Margin="10,0,0,0" Click="btnCancel_Click"/>
+        </StackPanel>
+        <ComboBox x:Name="cbBool" Width="120" VerticalAlignment="Center"/>
+
+    </Grid>
+</Window>

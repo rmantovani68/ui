@@ -39,38 +39,58 @@ namespace HmiExample
         }
         #endregion Singleton
 
-        #region Public Properties
+        #region Private Members
+
+        private System.Timers.Timer timer = new System.Timers.Timer();
+
+        // default loop time = 100
+        static private int _defaultLoopTime = 100;
+
+        // default application Name
+        static private string _defaultApplicationName = "Interface";
+
+        // default manager application Name
+        static private string _defaultManagerApplicationName = "Manager";
+
+        private int _loopTime;
+        private DateTime lastReadTime;
+
+        #endregion Private Members
+
+        #region Properties
 
         protected static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         public MDSClient mdsClient {get; private set;}
-        
         public string ApplicationName {get; private set;}
-        
         public string ManagerApplicationName {get; private set;}
-        
         public Model model { get; private set; }
+        public TimeSpan CycleReadTime { get; private set; }
 
-        #endregion Public Properties
-        
-        #region Private Properties
-
-        private DispatcherTimer timer { get; set; }
-        private short LoopTime { get; set; }
-        
-        #endregion Private Properties
-
-        #region Constructor
-        private Controller()
+        public int LoopTime
         {
-            // Name of this application: HMIClient
-            ApplicationName = "HMIClient";
-            // Name of the plc server application: PLCServer
-            ManagerApplicationName = "Manager";
+            get { return _loopTime; }
+
+            set
+            {
+                timer.Enabled = false;
+                timer.Interval = value; // ms
+                _loopTime = value;
+                timer.Enabled = true;
+            }
+        }
+
+        #endregion Properties
+        
+        #region Constructor
+        private Controller(int loopTime, string applicationName, string managerApplicationName)
+        {
+            // Name of this application
+            ApplicationName = applicationName;
+            // Name of the manager application
+            ManagerApplicationName = managerApplicationName;
             
             model = new Model();
-
-            timer = new DispatcherTimer();
 
             // Create MDSClient object to connect to DotNetMQ
             mdsClient = new MDSClient(ApplicationName);
@@ -88,17 +108,32 @@ namespace HmiExample
             // Register to MessageReceived event to get messages.
             mdsClient.MessageReceived += hmi_MessageReceived;
 
-            // timer 
-            timer.Interval = TimeSpan.FromMilliseconds(LoopTime);
-            timer.Tick += timer_Tick;
-            timer.IsEnabled = true;
-
             // connessione al manager
             ManagerConnect();
+            LoopTime = loopTime;
+            timer.Elapsed += timer_Elapsed;
+            timer.Enabled = true;
+
+            Logger.InfoFormat("{0} application ready", ApplicationName);
+        }
+
+        public Controller()
+            : this(_defaultLoopTime, _defaultApplicationName, _defaultManagerApplicationName)
+        {
         }
         #endregion
 
-        
+        #region Event Handlers
+        private void timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            timer.Enabled = false;
+            CycleReadTime = DateTime.Now - lastReadTime;
+
+            timer.Enabled = true;
+            lastReadTime = DateTime.Now;
+        }
+        #endregion Event Handlers
+
         #region Public Methods
 
         public bool SubscribeProperty(PropertyItem prop)
@@ -134,19 +169,6 @@ namespace HmiExample
             {
                 //Send message
                 message.Send();
-#if ELIMINATO
-                var responseMessage = message.SendAndGetResponse();
-
-                Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
-
-                //Get connect result
-                var ResponseData = GeneralHelper.DeserializeObject(responseMessage.MessageData) as ResponseData;
-
-                RetValue = ResponseData.Response;
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
-#endif
             }
             catch
             {
@@ -155,7 +177,7 @@ namespace HmiExample
                 RetValue = false;
             }
 
-            // da spostare dove arriva la conerma della addproperty
+            // da spostare dove arriva la conferma della addproperty
             if(RetValue)
             {
                 Logger.InfoFormat("Aggiunta {0}", prop.Path);
@@ -191,19 +213,6 @@ namespace HmiExample
             {
                 //Send message
                 message.Send();
-#if ELIMINATO
-                var responseMessage = message.SendAndGetResponse();
-
-                Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
-
-                //Get connect result
-                var ResponseData = GeneralHelper.DeserializeObject(responseMessage.MessageData) as ResponseData;
-
-                RetValue = ResponseData.Response;
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
-#endif
 
             }
             catch
@@ -244,19 +253,6 @@ namespace HmiExample
             {
                 //Send message
                 message.Send();
-#if ELIMINATO
-                var responseMessage = message.SendAndGetResponse();
-
-                Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
-
-                //Get connect result
-                var ResponseData = GeneralHelper.DeserializeObject(responseMessage.MessageData) as ResponseData;
-
-                RetValue = ResponseData.Response;
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
-#endif
             }
             catch
             {
@@ -292,19 +288,6 @@ namespace HmiExample
             {
                 //Send message
                 message.Send();
-#if ELIMINATO
-                var responseMessage = message.SendAndGetResponse();
-
-                Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
-
-                //Get connect result
-                var ResponseData = GeneralHelper.DeserializeObject(responseMessage.MessageData) as ResponseData;
-
-                RetValue = ResponseData.Response;
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
-#endif
             }
             catch
             {
@@ -338,21 +321,23 @@ namespace HmiExample
         /// <param name="e">Message parameters</param>
         private void hmi_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
+            // Get message 
+            var Message = e.Message;
+
             try
             {
-                // Get message 
-                var Message = e.Message;
                 // Get message data
                 var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
 
                 switch (MsgData.MsgCode)
                 {
-                    case MsgCodes.PropertiesChanged:
-                        /* gestione da fare */
-                        break;
-                    case MsgCodes.PropertyChanged:
-                        PropertyChanged(Message);
-                        break;
+                    case MsgCodes.PropertiesChanged:           /* gestione da fare */     break;
+                    case MsgCodes.PropertyChanged:             PropertyChanged(Message);  break;
+
+                    case MsgCodes.ResultSubscribeProperty:     /* Da implementare */      break;
+                    case MsgCodes.ResultSubscribeProperties:   /* Da implementare */      break;
+                    case MsgCodes.ResultRemoveProperty:        /* Da implementare */      break;
+                    case MsgCodes.ResultRemoveProperties:      /* Da implementare */      break;
 
                 }
             }

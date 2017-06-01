@@ -74,6 +74,14 @@ namespace HmiExample
             }
         }
 
+        private void btnPropertySetValue_Click(object sender, RoutedEventArgs e)
+        {
+            if (listviewProperties.SelectedItem != null)
+            {
+                var prop = listviewProperties.SelectedItem as PropertyItem;
+            }
+        }
+
         // Method to handle the Window.Closing event.
         private void Window_Closing(object sender, CancelEventArgs e)
         {
@@ -97,6 +105,7 @@ namespace HmiExample
                 btnDeleteProperty.IsEnabled = true;
             }
         }
+
     }
 }
 

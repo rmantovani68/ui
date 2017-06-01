@@ -93,14 +93,8 @@ namespace HmiExample
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public override bool Equals(System.Object obj)
+        public override bool Equals(Object obj)
         {
-            // If parameter is null return false.
-            if (obj == null)
-            {
-                return false;
-            }
-
             return Equals(obj as PropertyItem);
         }
 
