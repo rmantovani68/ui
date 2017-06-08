@@ -87,6 +87,7 @@ namespace HmiExample
         {
             // Name of this application
             ApplicationName = applicationName;
+
             // Name of the manager application
             ManagerApplicationName = managerApplicationName;
             
